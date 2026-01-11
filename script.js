@@ -493,7 +493,7 @@ const basketModal = document.querySelector(".basket-modal");
 const inputSearch = document.querySelector("input");
 const quickProductsElem = document.querySelector(".quick-products");
 const quickCount = document.querySelector(".quick-count");
-cartList = [];
+let cartList = [];
 function domRender(list) {
   list.forEach((item) => {
     pizzas.innerHTML += `
@@ -510,6 +510,7 @@ function domRender(list) {
   });
 }
 domRender(data);
+loadCartFromStorage();
 
 quickBasket.addEventListener("click", () => {
   if (basketModal.style.display === "none") {
@@ -526,34 +527,81 @@ inputSearch.addEventListener("input", (e) => {
   domRender(result);
 });
 
-quickCount = 0;
-function addToCart() {
-  console.log("salam");
-  quickCount.innerHTML = Number(quickCount.innerHTML) + 1;
+function addToCart(id) {
+  const found = cartList.find(item => item.id === id);
+
+  if (found) {
+    found.count++;
+  } else {
+    const pizza = data.find(item => item.id === id);
+    cartList.push({ ...pizza, count: 1 });
+  }
+
+  quickCount.innerHTML = cartList.reduce((sum, item) => sum + item.count, 0);
+  saveCartToStorage();
+  quickBasketRender();
 }
-addToCart();
+function calculateTotalPrice() {
+  const total = cartList.reduce(
+    (sum, item) => sum + item.price * item.count,
+    0
+  );
+  document.getElementById("totalPrice").innerText = total.toFixed(2);
+}
+
 
 function quickBasketRender() {
-  cartList.forEach((item) => {
+  quickProductsElem.innerHTML = "";
+
+  cartList.forEach(item => {
     quickProductsElem.innerHTML += `
-            <li class="quick-product">
-                    <div>
-                        <h5>${item.name}a</h5>
-                        <img src="${item.img}" alt="">
-                    </div>
-                    <div>
-                        <p>${item.price * item.count} AZN</p>
-                        <div>
-                            <button onclick="countDecrease('${
-                              item.id
-                            }')">-</button>
-                            <span>${item.count}</span>
-                            <button onclick="countIncrease('${
-                              item.id
-                            }')">+</button>
-                        </div>
-                    </div>
-                </li>
-        `;
+      <li class="quick-product">
+        <div>
+          <h5>${item.name}</h5>
+          <img src="${item.img}" alt="">
+        </div>
+        <div>
+          <p>${item.price * item.count} AZN</p>
+          <div>
+            <button onclick="countDecrease('${item.id}')">-</button>
+            <span>${item.count}</span>
+            <button onclick="countIncrease('${item.id}')">+</button>
+          </div>
+        </div>
+      </li>
+    `;
   });
+  calculateTotalPrice(); 
+}
+function saveCartToStorage() {
+  localStorage.setItem("cart", JSON.stringify(cartList));
+}
+function loadCartFromStorage() {
+  const savedCart = localStorage.getItem("cart");
+
+  if (savedCart) {
+    cartList = JSON.parse(savedCart);
+    quickBasketRender();
+    quickCount.innerHTML = cartList.reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
+  }
+}
+function countIncrease(id) {
+  cartList.find(item => item.id === id).count++;
+  saveCartToStorage();
+  quickBasketRender();
+}
+
+function countDecrease(id) {
+  const item = cartList.find(p => p.id === id);
+  item.count--;
+
+  if (item.count === 0) {
+    cartList = cartList.filter(p => p.id !== id);
+  }
+
+  saveCartToStorage();  
+  quickBasketRender();
 }
